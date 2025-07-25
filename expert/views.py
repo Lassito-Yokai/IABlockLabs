@@ -616,7 +616,7 @@ def validate_document(request, document_id):
                     f'❌ Produit non créé. Détails: {debug_info}'
                 )
 
-            return redirect('expert:document_list')
+            return redirect('expert:dashboard')
 
         except Exception as e:
             messages.error(request, f'❌ Erreur lors de la validation: {str(e)}')
