@@ -607,7 +607,7 @@ def validate_document(request, document_id):
                     reason=f"Document validated and product created: {product.name}"
                 )
 
-                return redirect('expert:document_list')
+                return redirect('expert:dashboard')
             else:
                 # Get detailed debug info
                 debug_info = debug_annotations_for_product(document)
