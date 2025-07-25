@@ -112,9 +112,19 @@ class DocumentReviewListView(LoginRequiredMixin, TemplateView):
 
         documents = RawDocument.objects.filter(
             is_ready_for_expert=True
-        ).annotate(
+        ).select_related('owner').prefetch_related('pages__annotations').annotate(
             annotation_count=Count('pages__annotations'),
         ).order_by('-expert_ready_at')
+
+        # Enrich documents with additional info
+        for doc in documents:
+            doc.annotator = doc.owner  # Add annotator field for template consistency
+            doc.pending_annotations = doc.pages.aggregate(
+                total=Count('annotations', filter=models.Q(annotations__validation_status='pending'))
+            )['total'] or 0
+            doc.validated_annotations = doc.pages.aggregate(
+                total=Count('annotations', filter=models.Q(annotations__validation_status='validated'))
+            )['total'] or 0
 
         paginator = Paginator(documents, 12)
         page_number = self.request.GET.get('page')
