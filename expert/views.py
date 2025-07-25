@@ -37,20 +37,29 @@ class ExpertDashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Documents ready for expert review
+        # Documents ready for expert review with annotator info
         ready_documents = RawDocument.objects.filter(
             is_ready_for_expert=True
-        )
+        ).select_related('owner').prefetch_related('pages__annotations')
 
         # Count pending annotations across all documents
         pending_annotations = Annotation.objects.filter(
             validation_status='pending'
         ).count()
 
+        # Enrich documents with annotation stats
+        enriched_documents = []
+        for doc in ready_documents.order_by('-expert_ready_at')[:5]:
+            doc.annotator = doc.owner  # Add annotator field
+            doc.total_annotations = sum(page.annotations.count() for page in doc.pages.all())
+            doc.pending_annotations = sum(page.annotations.filter(validation_status='pending').count() for page in doc.pages.all())
+            doc.validated_annotations = sum(page.annotations.filter(validation_status='validated').count() for page in doc.pages.all())
+            enriched_documents.append(doc)
+
         context.update({
             'ready_documents_count': ready_documents.count(),
             'pending_annotations': pending_annotations,
-            'recent_documents': ready_documents.order_by('-expert_ready_at')[:5],
+            'recent_documents': enriched_documents,
         })
         return context
 
