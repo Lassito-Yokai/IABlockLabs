@@ -85,13 +85,19 @@ class DocumentReviewView(LoginRequiredMixin, TemplateView):
 
         current_page = page_obj.object_list[0] if page_obj.object_list else None
 
-        all_annotation_types = AnnotationType.objects.all().order_by('display_name')
+        # Get all annotation types for expert interface
+        annotation_types = AnnotationType.objects.all().order_by('display_name')
+        
+        # Get existing annotations for current page
+        existing_annotations = current_page.annotations.all() if current_page else []
 
         context.update({
             'document': document,
             'page_obj': page_obj,
             'current_page': current_page,
-            'all_annotation_types': all_annotation_types,  # NOUVEAU
+            'annotation_types': annotation_types,  # Changed name for consistency with annotate_document.html
+            'existing_annotations': existing_annotations,
+            'total_pages': document.total_pages,
         })
         return context
 
