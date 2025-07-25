@@ -488,6 +488,60 @@ def create_annotation_type_ajax(request):
     return JsonResponse({'success': False, 'error': 'Method not allowed'})
 
 
+@expert_required
+@csrf_exempt
+def delete_annotation_type_ajax(request):
+    """AJAX endpoint for experts to delete annotation types"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            annotation_type_name = data.get('annotation_type_name', '').strip()
+
+            if not annotation_type_name:
+                return JsonResponse({'success': False, 'error': 'Annotation type name is required'})
+
+            # Check if annotation type exists
+            try:
+                annotation_type = AnnotationType.objects.get(name=annotation_type_name)
+            except AnnotationType.DoesNotExist:
+                return JsonResponse({'success': False, 'error': f'Annotation type "{annotation_type_name}" not found'})
+
+            # Check if this annotation type is being used
+            annotations_count = Annotation.objects.filter(
+                annotation_type=annotation_type
+            ).count()
+
+            if annotations_count > 0:
+                return JsonResponse({
+                    'success': False, 
+                    'error': f'Cannot delete annotation type "{annotation_type.display_name}" as it is used by {annotations_count} annotation(s)'
+                })
+
+            # Store info before deletion for logging
+            display_name = annotation_type.display_name
+
+            # Delete the annotation type
+            annotation_type.delete()
+
+            # LOG ACTION
+            log_expert_action(
+                user=request.user,
+                action='annotation_type_deleted',
+                annotation=None,
+                reason=f"Deleted annotation type: {display_name} ({annotation_type_name})"
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Annotation type "{display_name}" deleted successfully'
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'Method not allowed'})
+
+
 def create_product_from_annotations(document):
     """Create a product in client module from validated annotations"""
     from client.products.models import Product, ProductSpecification, ManufacturingSite
