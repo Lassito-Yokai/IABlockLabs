@@ -1186,7 +1186,53 @@ function hideContextMenu() {
 }
 
 function deleteAnnotationTypeFromMenu() {
-    // Implementation would go here - similar to annotate_document.html
+    if (!contextMenuTarget || !contextMenuTarget.dataset.type) {
+        alert('Aucun type d\'annotation sélectionné');
+        hideContextMenu();
+        return;
+    }
+
+    const annotationType = contextMenuTarget.dataset.type;
+    const displayName = contextMenuTarget.textContent;
+
+    if (confirm(`Êtes-vous sûr de vouloir supprimer le type d'annotation "${displayName}" ?`)) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('{% url "expert:delete_annotation_type" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                annotation_type_name: annotationType
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                
+                // Remove the button from the interface
+                contextMenuTarget.remove();
+                
+                // Clear selection if this was the selected type
+                if (selectedAnnotationType === annotationType) {
+                    selectedAnnotationType = null;
+                    selectedColor = null;
+                    document.getElementById('current-mode').textContent = 'Aucun type sélectionné';
+                    document.getElementById('current-mode').style.backgroundColor = '';
+                }
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur lors de la suppression du type d\'annotation');
+        });
+    }
+    
     hideContextMenu();
 }
 </script>
